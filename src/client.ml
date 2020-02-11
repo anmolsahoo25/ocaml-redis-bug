@@ -45,11 +45,11 @@ module Make(IO : S.IO) = struct
     IO.output_string out_ch "\r\n" >>= fun () ->
     IO.iter
       (fun arg ->
-        let length = String.length arg in
-        IO.output_string out_ch (Printf.sprintf "$%d" length) >>= fun () ->
-        IO.output_string out_ch "\r\n" >>= fun () ->
-        IO.output_string out_ch arg >>= fun () ->
-        IO.output_string out_ch "\r\n"
+         let length = String.length arg in
+         IO.output_string out_ch (Printf.sprintf "$%d" length) >>= fun () ->
+         IO.output_string out_ch "\r\n" >>= fun () ->
+         IO.output_string out_ch arg >>= fun () ->
+         IO.output_string out_ch "\r\n"
       )
       args >>= fun () ->
     IO.flush out_ch
@@ -59,26 +59,27 @@ module Make(IO : S.IO) = struct
     IO.really_input in_ch line 0 length >>= fun () ->
     IO.input_char in_ch >>= fun c1 ->
     IO.input_char in_ch >>= fun c2 ->
+    let line = Bytes.to_string line in
     match c1, c2 with
-      | '\r', '\n' -> IO.return line
-      | _          -> IO.fail (Unrecognized ("Expected terminator", line))
+    | '\r', '\n' -> IO.return line
+    | _          -> IO.fail (Unrecognized ("Expected terminator", line))
 
   let read_line in_ch =
     let buf = Buffer.create 32 in
     let rec loop () =
       IO.input_char in_ch >>= function
-        | '\r' ->
-            IO.input_char in_ch >>= (function
-              | '\n' ->
-                  IO.return (Buffer.contents buf)
-              | c ->
-                  Buffer.add_char buf '\r';
-                  Buffer.add_char buf c;
-                  loop ()
-            )
-        | c ->
-            Buffer.add_char buf c;
-            loop ()
+      | '\r' ->
+        IO.input_char in_ch >>= (function
+            | '\n' ->
+              IO.return (Buffer.contents buf)
+            | c ->
+              Buffer.add_char buf '\r';
+              Buffer.add_char buf c;
+              loop ()
+          )
+      | c ->
+        Buffer.add_char buf c;
+        loop ()
     in
     loop ()
 
@@ -92,13 +93,13 @@ module Make(IO : S.IO) = struct
   (* this expects the initial '$' to have already been consumed *)
   let read_bulk in_ch =
     read_line in_ch >>= fun line ->
-      match int_of_string line with
-        | -1 -> IO.return (`Bulk None)
-        | n when n >= 0 ->
-            read_fixed_line n in_ch >>= fun data ->
-            IO.return (`Bulk (Some data))
-        | n ->
-            IO.fail (Unrecognized ("Invalid bulk length", string_of_int n))
+    match int_of_string line with
+    | -1 -> IO.return (`Bulk None)
+    | n when n >= 0 ->
+      read_fixed_line n in_ch >>= fun data ->
+      IO.return (`Bulk (Some data))
+    | n ->
+      IO.fail (Unrecognized ("Invalid bulk length", string_of_int n))
 
   (* this expects the initial '*' to have already been consumed *)
   let rec read_multibulk in_ch =
@@ -114,29 +115,29 @@ module Make(IO : S.IO) = struct
 
   and read_reply in_ch =
     IO.input_char in_ch >>= function
-      | '+' ->
-          read_line in_ch >>= fun s -> IO.return (`Status s)
-      | '-' ->
-          read_line in_ch >>= fun s -> IO.return (`Error s)
-      | ':' ->
-          read_integer in_ch
-      | '$' ->
-          read_bulk in_ch
-      | '*' ->
-          read_multibulk in_ch
-      | c ->
-          IO.fail (Unrecognized ("Unexpected char in reply", Char.escaped c))
+    | '+' ->
+      read_line in_ch >>= fun s -> IO.return (`Status s)
+    | '-' ->
+      read_line in_ch >>= fun s -> IO.return (`Error s)
+    | ':' ->
+      read_integer in_ch
+    | '$' ->
+      read_bulk in_ch
+    | '*' ->
+      read_multibulk in_ch
+    | c ->
+      IO.fail (Unrecognized ("Unexpected char in reply", Char.escaped c))
 
   let read_reply_exn in_ch =
     read_reply in_ch >>= function
-      | `Status _
-      | `Int _
-      | `Int64 _
-      | `Bulk _
-      | `Multibulk _ as reply ->
-          IO.return reply
-      | `Error msg ->
-          IO.fail (Error msg)
+    | `Status _
+    | `Int _
+    | `Int64 _
+    | `Bulk _
+    | `Multibulk _ as reply ->
+      IO.return reply
+    | `Error msg ->
+      IO.fail (Error msg)
 
   let send_request connection command =
     write connection.out_ch command >>= fun () ->
@@ -213,9 +214,9 @@ module Make(IO : S.IO) = struct
     try
       return_multibulk reply >>= fun list ->
       IO.return (List.map (function
-        | `Bulk b -> b
-        | x -> raise (Unexpected x)
-      ) list)
+          | `Bulk b -> b
+          | x -> raise (Unexpected x)
+        ) list)
     with e -> IO.fail e
 
   (* multibulks all of whose entries are not nil *)
@@ -225,26 +226,26 @@ module Make(IO : S.IO) = struct
 
   let return_key_value_multibulk reply =
     return_bulk_multibulk reply >>= fun list ->
-      try
-        IO.return (Utils.List.filter_map (function
+    try
+      IO.return (Utils.List.filter_map (function
           | (Some k, Some v) -> Some (k, v)
           | _ -> None
         ) (deinterleave list))
-      with e -> IO.fail e
+    with e -> IO.fail e
 
   let return_opt_pair_multibulk reply =
     return_bulk_multibulk reply >>= function
-      | []               -> IO.return None
-      | [Some x; Some y] -> IO.return (Some (x, y))
-      | x                -> IO.fail (Invalid_argument "Expected nil or two-element multi-bulk")
+    | []               -> IO.return None
+    | [Some x; Some y] -> IO.return (Some (x, y))
+    | x                -> IO.fail (Invalid_argument "Expected nil or two-element multi-bulk")
 
   let return_info_bulk reply =
     return_bulk reply >>= function
-      | Some b ->
-          let fields = Utils.String.nsplit b "\r\n" in
-          let fields = List.filter (fun x -> x <> "" && not (String.get x 0 = '#')) fields in
-          IO.return (Utils.List.filter_map (fun f -> Utils.String.split f ":") fields)
-      | None   -> IO.return []
+    | Some b ->
+      let fields = Utils.String.nsplit b "\r\n" in
+      let fields = List.filter (fun x -> x <> "" && not (String.get x 0 = '#')) fields in
+      IO.return (Utils.List.filter_map (fun f -> Utils.String.split f ":") fields)
+    | None   -> IO.return []
 
   (* generate command for SORT *)
   let sort_command
@@ -258,32 +259,32 @@ module Make(IO : S.IO) = struct
     let command = ref [ key; "SORT" ] in (* we'll reverse this later *)
     let append x = command := x :: !command in
     (match by with
-       | Some by ->
-           append "BY";
-           append by
-       | None ->
-           ()
+     | Some by ->
+       append "BY";
+       append by
+     | None ->
+       ()
     );
     (match limit with
-       | Some (offset, limit) ->
-           append "LIMIT";
-           append (string_of_int offset);
-           append (string_of_int limit);
-       | None ->
-           ()
+     | Some (offset, limit) ->
+       append "LIMIT";
+       append (string_of_int offset);
+       append (string_of_int limit);
+     | None ->
+       ()
     );
     (match order with
-       | Some `Asc -> append "ASC"
-       | Some `Desc -> append "DESC"
-       | None -> ()
+     | Some `Asc -> append "ASC"
+     | Some `Desc -> append "DESC"
+     | None -> ()
     );
     if alpha then append "ALPHA";
     (match store with
-       | Some dest ->
-           append "STORE";
-           append dest
-       | None ->
-           ()
+     | Some dest ->
+       append "STORE";
+       append dest
+     | None ->
+       ()
     );
     List.rev !command
 
@@ -392,14 +393,14 @@ module Make(IO : S.IO) = struct
     let count = string_of_int count in
     let command = ["SCAN"; cursor; "MATCH"; pattern; "COUNT"; count] in
     send_request connection command >>= return_multibulk >>=
-      function
-      | `Bulk Some next_cursor :: `Multibulk keys :: [] ->
-         let next_cursor = int_of_string next_cursor in
-         let keys = List.map (function
-                               | `Bulk (Some s) -> s
-                               | x -> IO.fail (Unexpected x); "") keys in
-         IO.return (next_cursor, keys)
-      | _ -> IO.fail (Error "SCAN returned unexpected result")
+    function
+    | `Bulk Some next_cursor :: `Multibulk keys :: [] ->
+      let next_cursor = int_of_string next_cursor in
+      let keys = List.map (function
+          | `Bulk (Some s) -> s
+          | x -> IO.fail (Unexpected x); "") keys in
+      IO.return (next_cursor, keys)
+    | _ -> IO.fail (Error "SCAN returned unexpected result")
 
   (* Move key to a different db; returns true if key was moved, false otherwise. *)
   let move connection key index =
@@ -472,30 +473,30 @@ module Make(IO : S.IO) = struct
   let ttl connection key =
     let command = [ "TTL"; key ] in
     send_request connection command >>= return_int
-      >>= function
-        | -1 -> IO.return None
-        | t  -> IO.return (Some t)
+    >>= function
+    | -1 -> IO.return None
+    | t  -> IO.return (Some t)
 
   (* Returns None if key doesn't exist or doesn't have a timeout.
      Otherwise function returns Some milliseconds. *)
   let pttl connection key =
     let command = [ "PTTL"; key ] in
     send_request connection command >>= return_int
-      >>= function
-        | -1 -> IO.return None
-        | t  -> IO.return (Some t)
+    >>= function
+    | -1 -> IO.return None
+    | t  -> IO.return (Some t)
 
   (* TYPE is a reserved word in ocaml *)
   let type_of connection key =
     let command = [ "TYPE"; key ] in
     send_request connection command >>= return_status >>= function
-      | `Status "string" -> IO.return `String
-      | `Status "list"   -> IO.return `List
-      | `Status "zset"   -> IO.return `Zset
-      | `Status "hash"   -> IO.return `Hash
-      | `Status "none"   -> IO.return `None (* key doesn't exist *)
-      | `Status x        -> IO.fail (Unrecognized ("Unexpected TYPE result", x))
-      | x                -> IO.fail (Unexpected x)
+    | `Status "string" -> IO.return `String
+    | `Status "list"   -> IO.return `List
+    | `Status "zset"   -> IO.return `Zset
+    | `Status "hash"   -> IO.return `Hash
+    | `Status "none"   -> IO.return `None (* key doesn't exist *)
+    | `Status x        -> IO.fail (Unrecognized ("Unexpected TYPE result", x))
+    | x                -> IO.fail (Unexpected x)
 
   let dump connection key =
     let command = ["DUMP"; key] in
@@ -526,20 +527,20 @@ module Make(IO : S.IO) = struct
   let object_refcount connection key =
     let command = ["OBJECT"; "REFCOUNT"; key] in
     send_request connection command >>= function
-      | `Int x -> IO.return (Some x)
-      | _ -> IO.return None
+    | `Int x -> IO.return (Some x)
+    | _ -> IO.return None
 
   let object_encoding connection key =
     let command = ["OBJECT"; "ENCODING"; key] in
     send_request connection command >>= function
-      | `Bulk x -> IO.return x
-      | _ -> IO.return None
+    | `Bulk x -> IO.return x
+    | _ -> IO.return None
 
   let object_idletime connection key =
     let command = ["OBJECT"; "IDLETIME"; key] in
     send_request connection command >>= function
-      | `Int x -> IO.return (Some x)
-      | _ -> IO.return None
+    | `Int x -> IO.return (Some x)
+    | _ -> IO.return None
 
   (** String commands *)
 
@@ -566,7 +567,7 @@ module Make(IO : S.IO) = struct
     let start = string_of_int start in
     let stop = string_of_int stop in
     let command = [ "GETRANGE"; key; start; stop ] in
-   send_request connection command >>= return_bulk
+    send_request connection command >>= return_bulk
 
   (* Set value and return old value. Raises Error when key exists but isn't a string. *)
   let getset connection key value =
@@ -664,10 +665,10 @@ module Make(IO : S.IO) = struct
 
   let bitop connection op dest args =
     let op = (match op with
-              | NOT -> "NOT"
-              | AND -> "AND"
-              | OR -> "OR"
-              | XOR -> "XOR") in
+        | NOT -> "NOT"
+        | AND -> "AND"
+        | OR -> "OR"
+        | XOR -> "XOR") in
     let command = List.concat [["BITOP"; op; dest]; args] in
     send_request connection command >>= return_int
 
@@ -745,16 +746,16 @@ module Make(IO : S.IO) = struct
     let count = string_of_int count in
     let command = ["HSCAN"; key; cursor; "MATCH"; pattern; "COUNT"; count] in
     send_request connection command >>= return_multibulk >>=
-      function
-      | `Bulk Some next_cursor :: `Multibulk keys :: [] ->
-         let next_cursor = int_of_string next_cursor in
-         let entries =
-           List.map (function
-               | `Bulk (Some s) -> s
-               | x -> IO.fail (Unexpected x); "") keys in
-         let pairs = Utils.List.pairs_of_list entries |> Utils.Option.default [] in
-         IO.return (next_cursor, pairs)
-      | _ -> IO.fail (Error "HSCAN returned unexpected result")
+    function
+    | `Bulk Some next_cursor :: `Multibulk keys :: [] ->
+      let next_cursor = int_of_string next_cursor in
+      let entries =
+        List.map (function
+            | `Bulk (Some s) -> s
+            | x -> IO.fail (Unexpected x); "") keys in
+      let pairs = Utils.List.pairs_of_list entries |> Utils.Option.default [] in
+      IO.return (next_cursor, pairs)
+    | _ -> IO.fail (Error "HSCAN returned unexpected result")
 
   let hvals connection key =
     let command = [ "HVALS"; key ] in
@@ -779,9 +780,9 @@ module Make(IO : S.IO) = struct
     let timeout = string_of_int timeout in
     let command = [ "BRPOPLPUSH"; source; destination; timeout ] in
     send_request connection command >>= function
-      | `Multibulk []        -> IO.return None
-      | `Bulk (Some element) -> IO.return (Some element)
-      | x                    -> IO.fail (Unexpected x)
+    | `Multibulk []        -> IO.return None
+    | `Bulk (Some element) -> IO.return (Some element)
+    | x                    -> IO.fail (Unexpected x)
 
   (* Out of range or nonexistent key will return None. *)
   let lindex connection key index =
@@ -791,16 +792,16 @@ module Make(IO : S.IO) = struct
 
   (* Returns None if pivot isn't found, otherwise returns length of list after insert. *)
   let linsert connection key where pivot value =
-      let where =
-          match where with
-            | `Before -> "BEFORE"
-            | `After -> "AFTER"
-      in
-      let command = [ "LINSERT"; key; where; pivot; value ] in
-      send_request connection command >>= return_int
-        >>= function
-          | -1 -> IO.return None
-          | n  -> IO.return (Some n)
+    let where =
+      match where with
+      | `Before -> "BEFORE"
+      | `After -> "AFTER"
+    in
+    let command = [ "LINSERT"; key; where; pivot; value ] in
+    send_request connection command >>= return_int
+    >>= function
+    | -1 -> IO.return None
+    | n  -> IO.return (Some n)
 
   let llen connection key =
     let command = [ "LLEN"; key ] in
