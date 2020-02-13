@@ -1,4 +1,4 @@
-module IO : S.IO
+module IO : S.IO with type 'a t = 'a Lwt.t and type 'a stream = 'a Lwt_stream.t and type fd = Lwt_unix.file_descr
 
 module Client : S.Client with module IO = IO
 
