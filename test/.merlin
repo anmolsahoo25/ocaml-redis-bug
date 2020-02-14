@@ -1,30 +1,45 @@
 EXCLUDE_QUERY_DIR
 B /home/anmol/.opam/4.08.0+afl/lib/bytes
+B /home/anmol/.opam/4.08.0+afl/lib/containers
+B /home/anmol/.opam/4.08.0+afl/lib/containers/monomorphic
 B /home/anmol/.opam/4.08.0+afl/lib/lwt
 B /home/anmol/.opam/4.08.0+afl/lib/lwt/unix
 B /home/anmol/.opam/4.08.0+afl/lib/mmap
+B /home/anmol/.opam/4.08.0+afl/lib/oUnit
 B /home/anmol/.opam/4.08.0+afl/lib/ocaml
 B /home/anmol/.opam/4.08.0+afl/lib/ocaml/threads
 B /home/anmol/.opam/4.08.0+afl/lib/ocplib-endian
+B /home/anmol/.opam/4.08.0+afl/lib/ounit2
+B /home/anmol/.opam/4.08.0+afl/lib/ounit2/advanced
 B /home/anmol/.opam/4.08.0+afl/lib/re
 B /home/anmol/.opam/4.08.0+afl/lib/re/str
 B /home/anmol/.opam/4.08.0+afl/lib/redis
 B /home/anmol/.opam/4.08.0+afl/lib/result
 B /home/anmol/.opam/4.08.0+afl/lib/seq
+B /home/anmol/.opam/4.08.0+afl/lib/stdlib-shims
 B /home/anmol/.opam/4.08.0+afl/lib/uuidm
 B ../_build/default/src_lwt/.redis_lwt.objs/byte
+B ../_build/default/test/.redis_test.objs/byte
+B ../_build/default/test/.test_lwt.eobjs/byte
 S /home/anmol/.opam/4.08.0+afl/lib/bytes
+S /home/anmol/.opam/4.08.0+afl/lib/containers
+S /home/anmol/.opam/4.08.0+afl/lib/containers/monomorphic
 S /home/anmol/.opam/4.08.0+afl/lib/lwt
 S /home/anmol/.opam/4.08.0+afl/lib/lwt/unix
 S /home/anmol/.opam/4.08.0+afl/lib/mmap
+S /home/anmol/.opam/4.08.0+afl/lib/oUnit
 S /home/anmol/.opam/4.08.0+afl/lib/ocaml
 S /home/anmol/.opam/4.08.0+afl/lib/ocaml/threads
 S /home/anmol/.opam/4.08.0+afl/lib/ocplib-endian
+S /home/anmol/.opam/4.08.0+afl/lib/ounit2
+S /home/anmol/.opam/4.08.0+afl/lib/ounit2/advanced
 S /home/anmol/.opam/4.08.0+afl/lib/re
 S /home/anmol/.opam/4.08.0+afl/lib/re/str
 S /home/anmol/.opam/4.08.0+afl/lib/redis
 S /home/anmol/.opam/4.08.0+afl/lib/result
 S /home/anmol/.opam/4.08.0+afl/lib/seq
+S /home/anmol/.opam/4.08.0+afl/lib/stdlib-shims
 S /home/anmol/.opam/4.08.0+afl/lib/uuidm
+S ../src_lwt
 S .
-FLG -w -40 -safe-string
+FLG -w -40 -safe-string -warn-error -a -w -40 -safe-string
